@@ -6,28 +6,19 @@ import mcgui.*;
  *
  * @author Andreas Larsson &lt;larandr@chalmers.se&gt;
  */
-public class ExampleMessage extends Message implements Comparable<ExampleMessage> {
+public class ExampleMessage extends Message {
         
     String text;
     int msg_id;
-    boolean confirm = false;
+    boolean[] ack;
     int seq_number;
         
-    public ExampleMessage(int sender,String text,int msg_id, int seq_number, boolean confirm) {
+    public ExampleMessage(int sender,String text, int msg_id, int seq_number, boolean[] ack) {
         super(sender);
         this.text = text;
         this.msg_id = msg_id;
-        this.seq_number = seq_number;
-        this.confirm = confirm;
-    }
-
-    @Override
-    public int compareTo(ExampleMessage msg) {
-        //int compare_peer = msg.getPeer();
-        int compare_seq_number = msg.getSeq();
-        if( (this.seq_number - compare_seq_number) == 0 )
-            return 1;
-        return 0;
+        this.seq_number=seq_number;
+        this.ack = ack;
     }
     
     /**
@@ -37,12 +28,6 @@ public class ExampleMessage extends Message implements Comparable<ExampleMessage
      */
     public String getText() {
         return text;
-    }
-    public int getNum() {
-        return msg_id;
-    }
-    public int getSeq() {
-        return seq_number;
     }
     
     public static final long serialVersionUID = 0;
