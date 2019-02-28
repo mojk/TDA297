@@ -18,7 +18,7 @@ public class ExampleCaster extends Multicaster {
     int vc[];
     int requests[];
     ArrayList<Integer> participants;
-    ExampleMessage msg;
+    ExampleMessage init_msg;
 
 
     /* These three queues are used for undelivered msgs */
@@ -64,21 +64,44 @@ public class ExampleCaster extends Multicaster {
     }
         
     /**
-     * The GUI calls this module to multicast a message
+     * If you are the leader, you must add the leaders local sequence-number to the message
+     * if not, you just add the normal sequence number
+     * Nevertheless, before you send the message, you acknowledge that you've recieved it
+     * and store it in your message bag until you're sure that everyone else has recieved it
+     * and update the acknowledgement-vector accordingly
+     * once it has reached true on every entry, and its sequence number matches your own
+     * it will be time to deliver the message
      */
-    public void cast(String messagetext) {
-        msg = new ExampleMessage(id, messagetext, msg_id, seq_number, ack);
-        msg.ack[id] = true;
 
-        for(int i=0; i < hosts; i++) {
-            /* Sends to everyone except itself */
-            if(i != id) {
-                bcom.basicsend(i,msg);
+    public void cast(String messagetext) {
+        if(id == leader) {
+            init_msg = new ExampleMessage(id, messagetext, msg_id, leader_seq, ack);
+            init_msg.ack[id] = true;
+
+            for(int i=0; i < hosts; i++) {
+                /* Sends to everyone except itself */
+                if(i != id) {
+                    bcom.basicsend(i,init_msg);
+                }
             }
+            mcui.debug("Sent out: \""+messagetext+"\"");
+            msg_id++;
+            storeMsg(msg,id);    
+
+        } else {
+            init_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, ack);
+            init_msg.ack[id] = true;
+
+            for(int i=0; i < hosts; i++) {
+                /* Sends to everyone except itself */
+                if(i != id) {
+                    bcom.basicsend(i,init_msg);
+                }
+            }
+            mcui.debug("Sent out: \""+messagetext+"\"");
+            msg_id++;
+            storeMsg(msg,id);     
         }
-        mcui.debug("Sent out: \""+messagetext+"\"");
-        msg_id++;
-        storeMsg(msg,id);
     }
     
     /**
@@ -86,7 +109,12 @@ public class ExampleCaster extends Multicaster {
      * @param message  The message received
      */
     public void basicreceive(int peer,Message message) {
-        mcui.deliver(peer, ((ExampleMessage)message).text);
+        
+        if(id == leader) {
+
+        } else {
+
+        }
     }
 
     /**
@@ -95,6 +123,7 @@ public class ExampleCaster extends Multicaster {
      * arrive.
      * @param peer	The dead peer
      */
+
     public void basicpeerdown(int peer) {
         mcui.debug("Peer "+peer+" has been dead for a while now!");
         participants.remove(peer);
