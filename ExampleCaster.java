@@ -111,11 +111,12 @@ public class ExampleCaster extends Multicaster {
     public void basicreceive(int peer,Message message) {
         /* Code for leader */
         if(id == leader) {
+            ack_msg = (ExampleMessage) message;
             /* Recieving a request from someone else than yourself */
-            if(peer != id) {
+            if(peer != id && ack_msg.ack == false) {
             
             /* Recieving a request from someone else yourself */
-            } else {
+            } else if(peer == id && ack_msg.ack_msg ==false) {
 
             }
 
