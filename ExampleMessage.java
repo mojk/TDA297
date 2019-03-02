@@ -1,5 +1,7 @@
-
 import mcgui.*;
+import java.util.*;
+import java.util.Map.Entry;
+import java.lang.*;
 
 /**
  * Message implementation for ExampleCaster.
@@ -23,12 +25,12 @@ public class ExampleMessage extends Message implements Comparable<ExampleMessage
     
     @Override
     public int compareTo(ExampleMessage msg) {
-        //int compare_peer = msg.getPeer();
         int compare_seq_number = msg.getSeq();
         if( (this.seq_number - compare_seq_number) == 0 )
             return 1;
         return 0;
     }
+
     /**
      * Returns the text of the message only. The toString method can
      * be implemented to show additional things useful for debugging
@@ -36,6 +38,10 @@ public class ExampleMessage extends Message implements Comparable<ExampleMessage
      */
     public String getText() {
         return text;
+    }
+
+    public int getSeq() {
+        return seq_number;
     }
     
     public static final long serialVersionUID = 0;

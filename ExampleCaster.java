@@ -86,7 +86,7 @@ public class ExampleCaster extends Multicaster {
             }
             mcui.debug("Sent out: \""+messagetext+"\"");
             msg_id++;
-            storeMsg(msg,id);    
+            storeMsg(init_msg,id);    
 
         } else {
             init_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, ack);
@@ -100,7 +100,7 @@ public class ExampleCaster extends Multicaster {
             }
             mcui.debug("Sent out: \""+messagetext+"\"");
             msg_id++;
-            storeMsg(msg,id);     
+            storeMsg(init_msg,id);     
         }
     }
     
