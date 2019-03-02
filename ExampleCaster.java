@@ -102,13 +102,11 @@ public class ExampleCaster extends Multicaster {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, leader_seq, false, id);
             bcom.basicsend(leader,bc_msg);
             msg_id++;
-            //storeMsg(bc_msg,id);    
 
         } else {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, false, id);
             bcom.basicsend(leader,bc_msg);
-            msg_id++;
-            //storeMsg(bc_msg,id);     
+            msg_id++;  
         }
     }
     
@@ -272,7 +270,7 @@ public class ExampleCaster extends Multicaster {
      * @param peer  The dead peer
      */
 
-    public void basicpeerdown(int peer) {
+    public void basicpeerdown(int peer) { //TODO FIX SO EVERY NODE CLEARS THEIR MESSAGEBAG AND LEADER ANNOUNCES NEW SEQUENCENUMBER
         mcui.debug("Peer "+peer+" has been dead for a while now!");
         participants.remove(peer);
         leader = leader_election(participants);
