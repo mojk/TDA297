@@ -14,13 +14,15 @@ public class ExampleMessage extends Message implements Comparable<ExampleMessage
     int msg_id;
     boolean ack;
     int seq_number;
+    int origin;
         
-    public ExampleMessage(int sender,String text, int msg_id, int seq_number, boolean ack) {
+    public ExampleMessage(int sender,String text, int msg_id, int seq_number, boolean ack, int origin) {
         super(sender);
         this.text = text;
         this.msg_id = msg_id;
         this.seq_number=seq_number;
         this.ack = ack;
+        this.origin = origin;
     }
     
     @Override
