@@ -12,10 +12,10 @@ public class ExampleMessage extends Message implements Comparable<ExampleMessage
         
     String text;
     int msg_id;
-    boolean[] ack;
+    boolean ack;
     int seq_number;
         
-    public ExampleMessage(int sender,String text, int msg_id, int seq_number, boolean[] ack) {
+    public ExampleMessage(int sender,String text, int msg_id, int seq_number, boolean ack) {
         super(sender);
         this.text = text;
         this.msg_id = msg_id;
