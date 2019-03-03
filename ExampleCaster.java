@@ -22,6 +22,7 @@ public class ExampleCaster extends Multicaster {
     ExampleMessage stored_msg;
     ExampleMessage ack_msg;
     ExampleMessage deliver_msg;
+    ExampleMessage un_deliver_msg;
 
 
     /* These three queues are used for undelivered msgs */
@@ -80,7 +81,8 @@ public class ExampleCaster extends Multicaster {
      * once it has reached true on every entry, and its sequence number matches your own
      * it will be time to deliver the message
      */
-    public void broadcastConfirm(ExampleMessage msg) {
+
+    public void leaderBroadcast(ExampleMessage msg) {
             for(int i=0; i < hosts; i++) {
                 bcom.basicsend(i,msg);
             }
@@ -100,12 +102,16 @@ public class ExampleCaster extends Multicaster {
     public void cast(String messagetext) {
         if(id == leader) {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, leader_seq, false, id);
-            bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
+            //bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
+            leaderBroadcast(bc_msg); //bc to everyone
+            storeMsg(bc_msg, id, msg_bag); //save it to your bag
             msg_id++;
 
         } else {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, false, id);
-            bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
+            //bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
+            broadcast(bc_msg); //bc to everyone
+            storeMsg(bc_msg, id, msg_bag); //save it to your bag
             msg_id++;  
         }
     }
@@ -122,20 +128,23 @@ public class ExampleCaster extends Multicaster {
 
         if(id == leader) {
             deliver_msg  = (ExampleMessage) message;
+            un_deliver_msg = (ExampleMessage) message;
             ack_msg = (ExampleMessage) message;
             
             /* Recieving a request */
             if(ack_msg.ack == false && ack_msg.msg_id == requests[peer]) {
-                mcui.debug("Receved a request from " +ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
+                mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
                 ack_msg.seq_number = seq_number;
+                if(ack_msg.origin != leader)
+                    storeMsg(ack_msg, peer, msg_bag); //save to bag
                 ack_msg.ack = true;
                 requests[peer]++;
                 seq_number++;
-                broadcastConfirm(ack_msg);
+                leaderBroadcast(ack_msg); //bc to everyone to say which message in the next one to be deliverd
 
             /* Recieving a request from the future */
             } else if (ack_msg.ack == false && ack_msg.msg_id > requests[peer]) {
-                mcui.debug("Receved a request from " +ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
+                mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
                 mcui.debug("Global seq_number is " + seq_number + " stashing it" );
                 storeMsg(ack_msg, peer, leader_bag);
 
@@ -143,8 +152,8 @@ public class ExampleCaster extends Multicaster {
             /* Check if we have received any messages that we now can confirm */
             FetchFromBagAndConfirm();
 
-
             /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
+            // TODO WHEN RECIEVING A CONFIRMMESSAGE, CHECK BAG IF WE GOT ONE THAT NOT YET HAVE BEEN CONFIRMED, COMPARE, IF TRUE DELETE FROM BAG AND DELIVER, OTHERWISE STORE IT
             if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == leader_seq) {
                 mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
                 if(deliver_msg.origin == id) {
@@ -155,10 +164,10 @@ public class ExampleCaster extends Multicaster {
                     mcui.deliver(deliver_msg.origin, deliver_msg.text);
                     leader_seq++;
                     vc[deliver_msg.origin]++;
-                } else {
-                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag); //TODO: INSTEAD OF STORING IT, COMPARE AND SEE IF WE'VE RECIEVED BEFORE AND CHECK ACK
-            }
+                }
+                
             /* Check if we have any confirmed messages we can deliver */
+            if(isInBag(un_deliver_msg))
                 FetchFromBagAndDeliver();
         }
 
@@ -167,10 +176,13 @@ public class ExampleCaster extends Multicaster {
     //----------------------------------------------------------------
 
         } else {
-            /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
             deliver_msg = (ExampleMessage) message;
+            un_deliver_msg = (ExampleMessage) message;
+
+            /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
             if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == seq_number) {
                 mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
+                //TODO CHECK BAG HERE BEFORE DELIVERING IT
                 if(deliver_msg.origin == id) {
                     mcui.deliver(id, deliver_msg.text, "from myself!");
                     seq_number++;
@@ -183,9 +195,29 @@ public class ExampleCaster extends Multicaster {
                     storeMsg(deliver_msg, deliver_msg.origin, msg_bag); //TODO: INSTEAD OF STORING IT, COMPARE AND SEE IF WE'VE RECIEVED BEFORE AND CHECK ACK
             }
             /* Check if we have any confirmed messages we can deliver */
+            if(isInBag(un_deliver_msg))
                 FetchFromBagAndDeliver();
             }
         } // end non-leader code
+    }
+    public boolean isInBag(ExampleMessage undel_msg) {
+            mcui.debug("Checking bag to see if we have recieved the message before..");
+            for(int i = 0; i < participants.size(); i++) {
+                TreeMap<Integer,ExampleMessage> list = msg_bag.get(i);
+                TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
+                Iterator it = list_copy.values().iterator();
+                while(it.hasNext()) {
+                    ExampleMessage m = (ExampleMessage) it.next();
+                    mcui.debug("Comparing the message, it has the seq_number.. " +  undel_msg.seq_number +" and the id.. " + undel_msg.msg_id + " its ack is " + undel_msg.ack);
+                    mcui.debug("Pulled out a message, it has the seq_number.. " +  m.seq_number +" and the id.. " + m.msg_id + " its ack is " + m.ack);
+                    mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[i]);
+
+                    if (m.origin == undel_msg.origin && m.msg_id == undel_msg.msg_id && m.seq_number == undel_msg.seq_number && m.ack != undel_msg.ack) {
+                        return true;
+                    }
+                }
+            }
+            return false;
     }
 
     public void FetchFromBagAndConfirm() {
@@ -198,11 +230,12 @@ public class ExampleCaster extends Multicaster {
                 ExampleMessage m = (ExampleMessage) it.next();
                 if(m.msg_id == requests[m.getSender()]) {
                     ack_msg.seq_number = seq_number;
+                    storeMsg(ack_msg, ack_msg.origin, msg_bag); //save to bag
                     ack_msg.ack = true;
                     requests[m.getSender()]++;
                     seq_number++;
-                    broadcastConfirm(ack_msg);
-                    removeMsg(i, leader_bag);
+                    broadcast(ack_msg);
+                    removeMsg(i, leader_bag); //remove message
                 }
             }
         }
@@ -262,7 +295,6 @@ public class ExampleCaster extends Multicaster {
         }
     }
 }
-
     /**
      * Signals that a peer is down and has been down for a while to
      * allow for messages taking different paths from this peer to
