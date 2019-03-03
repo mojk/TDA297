@@ -100,12 +100,12 @@ public class ExampleCaster extends Multicaster {
     public void cast(String messagetext) {
         if(id == leader) {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, leader_seq, false, id);
-            bcom.basicsend(leader,bc_msg);
+            bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
             msg_id++;
 
         } else {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, false, id);
-            bcom.basicsend(leader,bc_msg);
+            bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
             msg_id++;  
         }
     }
@@ -156,7 +156,7 @@ public class ExampleCaster extends Multicaster {
                     leader_seq++;
                     vc[deliver_msg.origin]++;
                 } else {
-                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag);
+                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag); //TODO: INSTEAD OF STORING IT, COMPARE AND SEE IF WE'VE RECIEVED BEFORE AND CHECK ACK
             }
             /* Check if we have any confirmed messages we can deliver */
                 FetchFromBagAndDeliver();
@@ -180,7 +180,7 @@ public class ExampleCaster extends Multicaster {
                     seq_number++;
                     vc[deliver_msg.origin]++;
                 } else {
-                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag);
+                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag); //TODO: INSTEAD OF STORING IT, COMPARE AND SEE IF WE'VE RECIEVED BEFORE AND CHECK ACK
             }
             /* Check if we have any confirmed messages we can deliver */
                 FetchFromBagAndDeliver();
@@ -273,7 +273,8 @@ public class ExampleCaster extends Multicaster {
     public void basicpeerdown(int peer) { //TODO FIX SO EVERY NODE CLEARS THEIR MESSAGEBAG AND LEADER ANNOUNCES NEW SEQUENCENUMBER
         mcui.debug("Peer "+peer+" has been dead for a while now!");
         participants.remove(peer);
-        leader = leader_election(participants);
+        if(peer == leader)
+            leader = leader_election(participants);
     }
 
     /* Function for storing a message in the msg_bag */
