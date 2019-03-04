@@ -32,7 +32,6 @@ public class ExampleCaster extends Multicaster {
     HashMap<Integer, TreeMap<Integer,ExampleMessage>> leader_bag;
 
     public void re_init_leader() {
-        Collections.sort(participants);
         msg_bag = new HashMap<>(); //clear every message bag
         leader_bag = new HashMap<>(); //leader clears its leader bag
         seq_number = 0; // reset global sequence numbe
@@ -142,7 +141,7 @@ public class ExampleCaster extends Multicaster {
                 seq_number++;
                 leaderBroadcast(ack_msg); //bc to everyone to say which message in the next one to be deliverd
 
-            /* Recieving a request from the future */
+                /* Recieving a request from the future */
             } else if (ack_msg.ack == false && ack_msg.msg_id > requests[peer]) {
                 mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
                 mcui.debug("Global seq_number is " + seq_number + " stashing it" );
@@ -165,9 +164,9 @@ public class ExampleCaster extends Multicaster {
                     vc[deliver_msg.origin]++;
                 }
                 
-            /* Check if we have any confirmed messages we can deliver */
-            if(isInBag(un_deliver_msg))
-                FetchFromBagAndDeliver();
+                /* Check if we have any confirmed messages we can deliver */
+                if(isInBag(un_deliver_msg))
+                    FetchFromBagAndDeliver();
 
         } // end leader-code
 
@@ -175,31 +174,31 @@ public class ExampleCaster extends Multicaster {
     // Non-leader code
     //----------------------------------------------------------------
 
-        } else {
-            deliver_msg = (ExampleMessage) message;
-            un_deliver_msg = (ExampleMessage) message;
-            mcui.debug("Just received a message, let's check its properties");
-            mcui.debug("Sender= " + deliver_msg.origin + " status= " + deliver_msg.ack);
-            /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
-            if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == seq_number) {
-                mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
-                if(deliver_msg.origin == id) {
-                    mcui.deliver(id, deliver_msg.text, "from myself!");
-                    seq_number++;
-                    vc[deliver_msg.origin]++;
-                } else if( deliver_msg.origin != id) {
-                    mcui.deliver(deliver_msg.origin, deliver_msg.text);
-                    seq_number++;
-                    vc[deliver_msg.origin]++;
-                } else {
-                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag);
+    } else {
+        deliver_msg = (ExampleMessage) message;
+        un_deliver_msg = (ExampleMessage) message;
+        mcui.debug("Just received a message, let's check its properties");
+        mcui.debug("Sender= " + deliver_msg.origin + " status= " + deliver_msg.ack);
+        /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
+        if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == seq_number) {
+            mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
+            if(deliver_msg.origin == id) {
+                mcui.deliver(id, deliver_msg.text, "from myself!");
+                seq_number++;
+                vc[deliver_msg.origin]++;
+            } else if( deliver_msg.origin != id) {
+                mcui.deliver(deliver_msg.origin, deliver_msg.text);
+                seq_number++;
+                vc[deliver_msg.origin]++;
+            } else {
+                storeMsg(deliver_msg, deliver_msg.origin, msg_bag);
             }
             /* Check if we have any confirmed messages we can deliver */
             if(isInBag(un_deliver_msg))
                 FetchFromBagAndDeliver();
-            }
+        }
         } // end non-leader code
-}
+    }
     public boolean isInBag(ExampleMessage undel_msg) {
         mcui.debug("Checking bag to see if we have recieved the message before..");
         for(int i = 0; i < participants.size(); i++) {
@@ -239,7 +238,7 @@ public class ExampleCaster extends Multicaster {
                 }
             }
         }
-}
+    }
     public void FetchFromBagAndDeliver() {
         mcui.debug("Lets see if i have any messages i can deliver..");
         for(int i = 0; i < participants.size(); i++) {
@@ -272,7 +271,7 @@ public class ExampleCaster extends Multicaster {
             }
         }
     }
-    
+
     /**
      * Signals that a peer is down and has been down for a while to
      * allow for messages taking different paths from this peer to
