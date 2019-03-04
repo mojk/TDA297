@@ -240,10 +240,8 @@ public class ExampleCaster extends Multicaster {
             }
         }
 }
-
     public void FetchFromBagAndDeliver() {
         mcui.debug("Lets see if i have any messages i can deliver..");
-        if(id == leader) {
         for(int i = 0; i < participants.size(); i++) {
             TreeMap<Integer,ExampleMessage> list = msg_bag.get(i);
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
@@ -251,50 +249,30 @@ public class ExampleCaster extends Multicaster {
             while(it.hasNext()) {
                 ExampleMessage m = (ExampleMessage) it.next();
                 mcui.debug("Pulled out a message from , it has the seq_number.. " +  m.seq_number +" and the id.. " + m.msg_id);
-                mcui.debug("My sequence number is at.." + leader_seq +" and my vectorclock is at.. " +vc[i]);
+                if(id == leader)
+                    mcui.debug("My sequence number is at.." + leader_seq +" and my vectorclock is at.. " +vc[i]);
+                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[i]);
                 if (m.msg_id == vc[i]+1 && m.seq_number == leader_seq) {
                     mcui.debug("Fetched a message from our bag.. broadcasting message " + m.msg_id + " to everyone..");
                     mcui.debug("The sequence number on this message is " + m.seq_number);
-                    leader_seq++;
-                    mcui.debug("Increasing my local sequence number.. => " + seq_number);    
-                    vc[i]++;
-                    if(i == id) {
-                        mcui.deliver(i, m.text, "from myself!");
-                    } else {
-                        mcui.deliver(i, m.text);
-                    }
-                    removeMsg(i, msg_bag);
-                }
-            }
-        }
-
-        } else {
-        for(int i = 0; i < participants.size(); i++) {
-            TreeMap<Integer,ExampleMessage> list = msg_bag.get(i);
-            TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
-            Iterator it = list_copy.values().iterator();
-            while(it.hasNext()) {
-                ExampleMessage m = (ExampleMessage) it.next();
-                mcui.debug("Pulled out a message from , it has the seq_number.. " +  m.seq_number +" and the id.. " + m.msg_id);
-                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[i]);
-                if (m.msg_id == vc[i]+1 && m.seq_number == seq_number) {
-                    mcui.debug("Fetched a message from our bag.. broadcasting message " + m.msg_id + " to everyone..");
-                    mcui.debug("The sequence number on this message is " + m.seq_number);
+                    if(id == leader)
+                        leader_seq++;
                     seq_number++;
-                    mcui.debug("Increasing my local sequence number.. => " + seq_number);    
+                    if(id == leader)
+                        mcui.debug("Increasing my local sequence number.. => " + leader_seq);
+                    mcui.debug("Increasing my local sequence number.. => " + seq_number);      
                     vc[i]++;
                     if(i == id) {
                         mcui.deliver(i, m.text, "from myself!");
                     } else {
                         mcui.deliver(i, m.text);
-
                     }
                     removeMsg(i, msg_bag);
                 }
             }
         }
     }
-}
+    
     /**
      * Signals that a peer is down and has been down for a while to
      * allow for messages taking different paths from this peer to
