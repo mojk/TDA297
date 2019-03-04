@@ -14,7 +14,6 @@ public class ExampleCaster extends Multicaster {
     int leader;
     int seq_number = 0;
     int leader_seq = 0;
-    boolean[] ack = new boolean[3];
     int vc[];
     int requests[];
     ArrayList<Integer> participants;
@@ -24,45 +23,40 @@ public class ExampleCaster extends Multicaster {
     ExampleMessage deliver_msg;
     ExampleMessage un_deliver_msg;
 
-
     /* These three queues are used for undelivered msgs */
-    TreeMap<Integer,ExampleMessage> msgs_0 = new TreeMap<>();
-    TreeMap<Integer,ExampleMessage> msgs_1 = new TreeMap<>(); 
-    TreeMap<Integer,ExampleMessage> msgs_2 = new TreeMap<>();
+    TreeMap<Integer, ExampleMessage> messages;
+    TreeMap<Integer, ExampleMessage> unconfirmed_messages;
 
-    TreeMap<Integer,ExampleMessage> l_0 = new TreeMap<>();
-    TreeMap<Integer,ExampleMessage> l_1 = new TreeMap<>(); 
-    TreeMap<Integer,ExampleMessage> l_2 = new TreeMap<>();
-    HashMap<Integer, TreeMap<Integer,ExampleMessage>> msg_bag = initHashMap(msgs_0, msgs_1, msgs_2);
-    HashMap<Integer, TreeMap<Integer,ExampleMessage>> leader_bag = initHashMap(l_0, l_1, l_2);
+    HashMap<Integer, TreeMap<Integer,ExampleMessage>> msg_bag;
+    HashMap<Integer, TreeMap<Integer,ExampleMessage>> leader_bag;
 
-    /* Function to initalize the TreeMap */
+    public void re_init(){
 
-    public static HashMap<Integer, TreeMap<Integer,ExampleMessage>> initHashMap(TreeMap<Integer,ExampleMessage> list0, TreeMap<Integer,ExampleMessage> list1, TreeMap<Integer,ExampleMessage> list2) {
-        HashMap<Integer, TreeMap<Integer,ExampleMessage>> mb = new HashMap<>();
-        mb.put(0,list0);
-        mb.put(1,list1);
-        mb.put(2,list2);
-        return mb;
     }
 
     public void init() {
         mcui.debug("The network has "+hosts+" hosts!");
-        vc = new int[hosts]; // Initializing the vector clock
-        requests = new int[hosts]; //initializing the sent-vector that the leader uses
         participants = new ArrayList<>();
-
+        msg_bag = new HashMap<>();
+        leader_bag = new HashMap<>();    
         for(int i = 0; i < hosts; i++) {
-            vc[i] = 0;
-            requests[i] = 0;
+            messages = new TreeMap<>();
+            unconfirmed_messages = new TreeMap<>();
+            msg_bag.put(i, messages);
+            leader_bag.put(i, unconfirmed_messages);
             participants.add(i);
+            mcui.debug("Adding... " + i);
         }
+
+        vc = new int[participants.size()]; // Initializing the vector clock
+        requests = new int[participants.size()]; //initializing the sent-vector that the leader uses
         leader = leader_election(participants);
     }
 
     /* Leader Election Function */
 
     public int leader_election(ArrayList<Integer> nodes) {
+        Collections.sort(nodes);
         mcui.debug("Time to decide who is the leader");
         int min = nodes.get(0);
         for (int i : nodes){
@@ -83,14 +77,14 @@ public class ExampleCaster extends Multicaster {
      */
 
     public void leaderBroadcast(ExampleMessage msg) {
-            for(int i=0; i < hosts; i++) {
-                bcom.basicsend(i,msg);
-            }
-            mcui.debug("Sent out: \""+msg.text+"\"");
+        for(int i=0; i < participants.size(); i++) {
+            bcom.basicsend(i,msg);
+        }
+        mcui.debug("Sent out: \""+msg.text+"\"");
     }
 
     public void broadcast(ExampleMessage msg) {
-        for(int i=0; i < hosts; i++) {
+        for(int i=0; i < participants.size(); i++) {
             /* Sends to everyone except itself */
             if(i != id) {
                 bcom.basicsend(i,msg);
@@ -102,14 +96,11 @@ public class ExampleCaster extends Multicaster {
     public void cast(String messagetext) {
         if(id == leader) {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, leader_seq, false, id);
-            //bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
             leaderBroadcast(bc_msg); //bc to everyone
             storeMsg(bc_msg, id, msg_bag); //save it to your bag
             msg_id++;
-
         } else {
             bc_msg = new ExampleMessage(id, messagetext, msg_id, seq_number, false, id);
-            //bcom.basicsend(leader,bc_msg); //TODO: BROADCAST TO EVERYONE AND STORE LOCAL
             broadcast(bc_msg); //bc to everyone
             storeMsg(bc_msg, id, msg_bag); //save it to your bag
             msg_id++;  
@@ -130,7 +121,7 @@ public class ExampleCaster extends Multicaster {
             deliver_msg  = (ExampleMessage) message;
             un_deliver_msg = (ExampleMessage) message;
             ack_msg = (ExampleMessage) message;
-            
+
             /* Recieving a request */
             if(ack_msg.ack == false && ack_msg.msg_id == requests[peer]) {
                 mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
@@ -153,7 +144,6 @@ public class ExampleCaster extends Multicaster {
             FetchFromBagAndConfirm();
 
             /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
-            // TODO WHEN RECIEVING A CONFIRMMESSAGE, CHECK BAG IF WE GOT ONE THAT NOT YET HAVE BEEN CONFIRMED, COMPARE, IF TRUE DELETE FROM BAG AND DELIVER, OTHERWISE STORE IT
             if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == leader_seq) {
                 mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
                 if(deliver_msg.origin == id) {
@@ -169,7 +159,8 @@ public class ExampleCaster extends Multicaster {
             /* Check if we have any confirmed messages we can deliver */
             if(isInBag(un_deliver_msg))
                 FetchFromBagAndDeliver();
-        }
+
+        } // end leader-code
 
     //----------------------------------------------------------------
     // Non-leader code
@@ -182,7 +173,6 @@ public class ExampleCaster extends Multicaster {
             /* We check if the message that we've recieved is ready to be delivered, otherwise we store it in our bag and check if we have a message that is ready to be delivered */
             if(deliver_msg.ack == true && deliver_msg.msg_id == vc[deliver_msg.origin] && deliver_msg.seq_number == seq_number) {
                 mcui.debug("Receved a deliverable from " + deliver_msg.origin + " seq_number = " + deliver_msg.seq_number);
-                //TODO CHECK BAG HERE BEFORE DELIVERING IT
                 if(deliver_msg.origin == id) {
                     mcui.deliver(id, deliver_msg.text, "from myself!");
                     seq_number++;
@@ -192,7 +182,7 @@ public class ExampleCaster extends Multicaster {
                     seq_number++;
                     vc[deliver_msg.origin]++;
                 } else {
-                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag); //TODO: INSTEAD OF STORING IT, COMPARE AND SEE IF WE'VE RECIEVED BEFORE AND CHECK ACK
+                    storeMsg(deliver_msg, deliver_msg.origin, msg_bag);
             }
             /* Check if we have any confirmed messages we can deliver */
             if(isInBag(un_deliver_msg))
@@ -304,8 +294,13 @@ public class ExampleCaster extends Multicaster {
 
     public void basicpeerdown(int peer) { //TODO FIX SO EVERY NODE CLEARS THEIR MESSAGEBAG AND LEADER ANNOUNCES NEW SEQUENCENUMBER
         mcui.debug("Peer "+peer+" has been dead for a while now!");
-        participants.remove(peer);
-        if(peer == leader)
+        for(int i = 0; i < participants.size(); i++) {
+            if(peer == participants.get(i))
+                participants.remove(i);
+        }
+        for(int i = 0; i < participants.size(); i++) {
+            mcui.debug("Remaining guys are... " + participants.get(i));
+        }
             leader = leader_election(participants);
     }
 
