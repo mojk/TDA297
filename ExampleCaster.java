@@ -4,9 +4,8 @@ import java.util.Map.Entry;
 import java.lang.*;
 
 /**
- * Simple example of how to use the Multicaster interface.
- *
- * @author Andreas Larsson &lt;larandr@chalmers.se&gt;
+ * Reliable Broadcast with Total & Casual Ordering
+ * @author Mikael Gordani
  */
 
 public class ExampleCaster extends Multicaster {
@@ -36,13 +35,13 @@ public class ExampleCaster extends Multicaster {
         leader_bag = new HashMap<>(); //leader clears its leader bag
         seq_number = 0; // reset global sequence numbe
         leader_seq = 0; // leader also must reset his local sequene number
+        requests = new int[participants.size()]; //clear the requests
 
         for(int i = 0; i < participants.size(); i++) {
             messages = new TreeMap<>();
             unconfirmed_messages = new TreeMap<>();
             msg_bag.put(participants.get(i), messages);
             leader_bag.put(participants.get(i), unconfirmed_messages);
-            requests[participants.get(i)] = 0;
         }
         leader = leader_election(participants);
     }
