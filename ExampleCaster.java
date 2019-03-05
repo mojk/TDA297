@@ -200,15 +200,15 @@ public class ExampleCaster extends Multicaster {
     }
     public boolean isInBag(ExampleMessage undel_msg) {
         mcui.debug("Checking bag to see if we have recieved the message before..");
-        for(int i = 0; i < participants.size(); i++) {
-            TreeMap<Integer,ExampleMessage> list = msg_bag.get(i);
+        for(int node: participants) {
+            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(node));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
                 ExampleMessage m = (ExampleMessage) it.next();
                 mcui.debug("Comparing the message, it has the seq_number.. " +  undel_msg.seq_number +" and the id.. " + undel_msg.msg_id + " its ack is " + undel_msg.ack);
                 mcui.debug("Pulled out a message, it has the seq_number.. " +  m.seq_number +" and the id.. " + m.msg_id + " its ack is " + m.ack);
-                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[i]);
+                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[m.origin]);
 
                 if (m.origin == undel_msg.origin && m.msg_id == undel_msg.msg_id && m.seq_number == undel_msg.seq_number && m.ack != undel_msg.ack) {
                     return true;
@@ -220,8 +220,8 @@ public class ExampleCaster extends Multicaster {
 
     public void FetchFromBagAndConfirm() {
         mcui.debug("Let's see if I've recieved something that I now can confirm!");
-        for(int i = 0; i < participants.size(); i++) {
-            TreeMap<Integer,ExampleMessage> list = leader_bag.get(i);
+        for(int node : participants) {
+            TreeMap<Integer,ExampleMessage> list = leader_bag.get(participants.get(node));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
@@ -233,24 +233,24 @@ public class ExampleCaster extends Multicaster {
                     requests.put(m.getSender(), requests.get(m.getSender())+1);
                     seq_number++;
                     leaderBroadcast(ack_msg);
-                    removeMsg(i, leader_bag); //remove message
+                    removeMsg(participants.get(node), leader_bag); //remove message
                 }
             }
         }
     }
     public void FetchFromBagAndDeliver() {
         mcui.debug("Lets see if i have any messages i can deliver..");
-        for(int i = 0; i < participants.size(); i++) {
-            TreeMap<Integer,ExampleMessage> list = msg_bag.get(i);
+        for(int node : participants) {
+            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(node));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
                 ExampleMessage m = (ExampleMessage) it.next();
                 mcui.debug("Pulled out a message from , it has the seq_number.. " +  m.seq_number +" and the id.. " + m.msg_id);
                 if(id == leader)
-                    mcui.debug("My sequence number is at.." + leader_seq +" and my vectorclock is at.. " +vc[i]);
-                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[i]);
-                if (m.msg_id == vc[i]+1 && m.seq_number == leader_seq) {
+                    mcui.debug("My sequence number is at.." + leader_seq +" and my vectorclock is at.. " +vc[m.origin]);
+                mcui.debug("My sequence number is at.." + seq_number +" and my vectorclock is at.. " +vc[m.origin]);
+                if (m.msg_id == vc[m.origin]+1 && m.seq_number == leader_seq) {
                     mcui.debug("Fetched a message from our bag.. broadcasting message " + m.msg_id + " to everyone..");
                     mcui.debug("The sequence number on this message is " + m.seq_number);
                     if(id == leader)
@@ -259,13 +259,13 @@ public class ExampleCaster extends Multicaster {
                     if(id == leader)
                         mcui.debug("Increasing my local sequence number.. => " + leader_seq);
                     mcui.debug("Increasing my local sequence number.. => " + seq_number);      
-                    vc[i]++;
-                    if(i == id) {
-                        mcui.deliver(i, m.text, "from myself!");
+                    vc[m.origin]++;
+                    if(m.origin == id) {
+                        mcui.deliver(participants.get(node), m.text, "from myself!");
                     } else {
-                        mcui.deliver(i, m.text);
+                        mcui.deliver(participants.get(node), m.text);
                     }
-                    removeMsg(i, msg_bag);
+                    removeMsg(participants.get(node), msg_bag);
                 }
             }
         }
