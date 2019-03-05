@@ -15,7 +15,6 @@ public class ExampleCaster extends Multicaster {
     int seq_number = 0;
     int leader_seq = 0;
     int vc[];
-    int requests[];
 
     ArrayList<Integer> participants;
     ExampleMessage bc_msg;
@@ -29,26 +28,28 @@ public class ExampleCaster extends Multicaster {
     TreeMap<Integer, ExampleMessage> unconfirmed_messages;
     HashMap<Integer, TreeMap<Integer,ExampleMessage>> msg_bag;
     HashMap<Integer, TreeMap<Integer,ExampleMessage>> leader_bag;
+    HashMap<Integer, Integer> requests;
 
     public void re_init_leader() {
         msg_bag = new HashMap<>(); //clear every message bag
         leader_bag = new HashMap<>(); //leader clears its leader bag
+        requests = new HashMap<>();
         seq_number = 0; // reset global sequence numbe
-        leader_seq = 0; // leader also must reset his local sequene number
-        requests = new int[participants.size()]; //clear the requests
+        leader_seq = 0; // leader also must reset his local sequence number
 
         for(int i = 0; i < participants.size(); i++) {
             messages = new TreeMap<>();
             unconfirmed_messages = new TreeMap<>();
             msg_bag.put(participants.get(i), messages);
             leader_bag.put(participants.get(i), unconfirmed_messages);
+            requests.put(participants.get(i), 0);
         }
         leader = leader_election(participants);
     }
 
     public void init() {
         mcui.debug("The network has "+hosts+" hosts!");
-
+        requests = new HashMap<>();
         participants = new ArrayList<>();
         msg_bag = new HashMap<>();
         leader_bag = new HashMap<>();
@@ -59,11 +60,10 @@ public class ExampleCaster extends Multicaster {
             msg_bag.put(i, messages);
             leader_bag.put(i, unconfirmed_messages);
             participants.add(i);
+            requests.put(participants.get(i), 0);
             mcui.debug("Adding... " + i);
         }
-
-        vc = new int[participants.size()]; // Initializing the vector clock
-        requests = new int[participants.size()]; // initializing the sent-vector that the leader uses
+        vc = new int[participants.size()];
         leader = leader_election(participants); // Electing leader 
     }
 
@@ -130,18 +130,18 @@ public class ExampleCaster extends Multicaster {
             ack_msg = (ExampleMessage) message;
 
             /* Recieving a request */
-            if(ack_msg.ack == false && ack_msg.msg_id == requests[peer]) {
+            if(ack_msg.ack == false && ack_msg.msg_id == requests.get(peer)) { //if leader dies this won't work, fix
                 mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
                 ack_msg.seq_number = seq_number;
                 if(ack_msg.origin != leader)
                     storeMsg(ack_msg, peer, msg_bag); //save to bag
                 ack_msg.ack = true;
-                requests[peer]++;
+                requests.put(peer, requests.get(peer)+1);
                 seq_number++;
                 leaderBroadcast(ack_msg); //bc to everyone to say which message in the next one to be deliverd
 
                 /* Recieving a request from the future */
-            } else if (ack_msg.ack == false && ack_msg.msg_id > requests[peer]) {
+            } else if (ack_msg.ack == false && ack_msg.msg_id > requests.get(peer)) {
                 mcui.debug("Receved a request from " + ack_msg.getSender() + " seq_number = " + ack_msg.seq_number);
                 mcui.debug("Global seq_number is " + seq_number + " stashing it" );
                 storeMsg(ack_msg, peer, leader_bag);
@@ -226,11 +226,11 @@ public class ExampleCaster extends Multicaster {
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
                 ExampleMessage m = (ExampleMessage) it.next();
-                if(m.msg_id == requests[m.getSender()]) {
+                if(m.msg_id == requests.get(m.getSender())) {
                     ack_msg.seq_number = seq_number;
                     storeMsg(ack_msg, ack_msg.origin, msg_bag); //save to bag
                     ack_msg.ack = true;
-                    requests[m.getSender()]++;
+                    requests.put(m.getSender(), requests.get(m.getSender())+1);
                     seq_number++;
                     leaderBroadcast(ack_msg);
                     removeMsg(i, leader_bag); //remove message
