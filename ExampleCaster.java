@@ -33,16 +33,19 @@ public class ExampleCaster extends Multicaster {
     public void re_init_leader() {
         msg_bag = new HashMap<>(); //clear every message bag
         leader_bag = new HashMap<>(); //leader clears its leader bag
-        requests = new HashMap<>();
+        requests = new HashMap<>(); //clear the requests sent from every node
         seq_number = 0; // reset global sequence numbe
         leader_seq = 0; // leader also must reset his local sequence number
-
+        msg_id = 0;
         for(int i = 0; i < participants.size(); i++) {
             messages = new TreeMap<>();
             unconfirmed_messages = new TreeMap<>();
             msg_bag.put(participants.get(i), messages);
             leader_bag.put(participants.get(i), unconfirmed_messages);
             requests.put(participants.get(i), 0);
+        }
+        for(int i = 0; i < 3; i++) {
+            vc[i] = 0;
         }
         leader = leader_election(participants);
     }
