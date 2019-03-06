@@ -200,8 +200,8 @@ public class ExampleCaster extends Multicaster {
     }
     public boolean isInBag(ExampleMessage undel_msg) {
         mcui.debug("Checking bag to see if we have recieved the message before..");
-        for(int node: participants) {
-            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(node));
+        for(int i = 0; i < participants.size(); i++) {
+            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(i));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
@@ -220,8 +220,8 @@ public class ExampleCaster extends Multicaster {
 
     public void FetchFromBagAndConfirm() {
         mcui.debug("Let's see if I've recieved something that I now can confirm!");
-        for(int node : participants) {
-            TreeMap<Integer,ExampleMessage> list = leader_bag.get(participants.get(node));
+        for(int i = 0; i < participants.size(); i++) {
+            TreeMap<Integer,ExampleMessage> list = leader_bag.get(participants.get(i));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
@@ -233,15 +233,15 @@ public class ExampleCaster extends Multicaster {
                     requests.put(m.getSender(), requests.get(m.getSender())+1);
                     seq_number++;
                     leaderBroadcast(ack_msg);
-                    removeMsg(participants.get(node), leader_bag); //remove message
+                    removeMsg(m.getSender(), leader_bag); //remove message
                 }
             }
         }
     }
     public void FetchFromBagAndDeliver() {
         mcui.debug("Lets see if i have any messages i can deliver..");
-        for(int node : participants) {
-            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(node));
+        for(int i = 0; i < participants.size(); i++) {
+            TreeMap<Integer,ExampleMessage> list = msg_bag.get(participants.get(i));
             TreeMap<Integer,ExampleMessage> list_copy = new TreeMap<>(list);
             Iterator it = list_copy.values().iterator();
             while(it.hasNext()) {
@@ -260,12 +260,12 @@ public class ExampleCaster extends Multicaster {
                         mcui.debug("Increasing my local sequence number.. => " + leader_seq);
                     mcui.debug("Increasing my local sequence number.. => " + seq_number);      
                     vc[m.origin]++;
-                    if(m.origin == id) {
-                        mcui.deliver(participants.get(node), m.text, "from myself!");
+                    if(i == id) {
+                        mcui.deliver(m.origin, m.text, "from myself!");
                     } else {
-                        mcui.deliver(participants.get(node), m.text);
+                        mcui.deliver(m.origin, m.text);
                     }
-                    removeMsg(participants.get(node), msg_bag);
+                    removeMsg(m.origin, msg_bag);
                 }
             }
         }
