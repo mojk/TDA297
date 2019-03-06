@@ -281,7 +281,7 @@ public class ExampleCaster extends Multicaster {
      * @param peer  The dead peer
      */
 
-    public void basicpeerdown(int peer) { //TODO FIX SO EVERY NODE CLEARS THEIR MESSAGEBAG AND LEADER ANNOUNCES NEW SEQUENCENUMBER
+    public void basicpeerdown(int peer) {
         mcui.debug("Peer "+peer+" has been dead for a while now!");
         for(int i = 0; i < participants.size(); i++) {
             if(peer == participants.get(i))
